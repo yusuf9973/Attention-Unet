@@ -126,7 +126,7 @@ class UNet(nn.Module):
 
         self.final = torch.utils.checkpoint(self.final)
 
-input = torch.randn(1,3,256,256)
-model = UNet(3,5,False,0)
-output = UNet(input)
+input = torch.randn(1, 3, 256, 256)
+model = UNet(n_channels=3, n_classes=5, bilinear=False, index=0)
+output = model(input)
 print(output.shape)
