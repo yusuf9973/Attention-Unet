@@ -125,3 +125,8 @@ class UNet(nn.Module):
         self.conv0_4 = torch.utils.checkpoint(self.conv0_4)
 
         self.final = torch.utils.checkpoint(self.final)
+
+input = torch.randn(1,3,256,256)
+model = UNet(3,5,False,0)
+output = UNet(input)
+print(output.shape)
