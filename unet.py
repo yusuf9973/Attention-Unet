@@ -126,5 +126,7 @@ os.system('cls')
 for i in range(10):
     x = torch.randn((1,3,256,256))
     model = UNet(n_channels=3, n_classes=5, bilinear=False,index = i)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model.to(device)
     y = model(x) 
     print(i,x.shape,y.shape)
