@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import traceback
 
 class HalfNormal(object):
     def __init__(self, scale, seed, device):
@@ -57,19 +58,32 @@ def gaussian_dynamic_conv(in_channels, out_channels, kernel_size, padding, bias=
     seed = 307
     scale = 2
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    return GFDConv(in_channels, out_channels, bias, scale, device, seed, fix_w, fix_h)
+    return GFDConv(in_channels, out_channels, bias, scale, 'cpu', seed, fix_w, fix_h)
 
+class GD_AC(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=False):
+        super(GD_AC, self).__init__()
+        assert isinstance(kernel_size, int) # only support square kernels
+        self.square_conv = gaussian_dynamic_conv(in_channels, int(out_channels*0.5), kernel_size, padding, bias=False)
+        self.ver_conv = nn.Conv2d(in_channels, int(out_channels*0.33), (kernel_size, 1), stride=stride, padding=(padding, 0), dilation=dilation, groups=groups, bias=bias)
+        self.hor_conv = nn.Conv2d(in_channels, int(out_channels*0.167), (1, kernel_size), stride=stride, padding=(0, padding), dilation=dilation, groups=groups, bias=bias)
 
+    def forward(self, x):
+        x1 = self.square_conv(x)
+        x2 = self.ver_conv(x)
+        x3 = self.hor_conv(x)
+        x = torch.cat([x1,x2,x3], dim=1)
+        return x
 
 class conv_block(nn.Module):
     def __init__(self, in_ch, out_ch,index=0):
         super(conv_block, self).__init__()
 
         self.conv = nn.Sequential(
-            gaussian_dynamic_conv(in_ch, out_ch, kernel_size=3,  padding=1, bias=True),
+            GD_AC(in_ch, out_ch, kernel_size=3,  padding=1, bias=True),
             nn.BatchNorm2d(out_ch),
             nn.ReLU(inplace=True),
-            gaussian_dynamic_conv(out_ch, out_ch, kernel_size=3, padding=1, bias=True),
+            GD_AC(out_ch, out_ch, kernel_size=3, padding=1, bias=True),
             nn.BatchNorm2d(out_ch),
             nn.ReLU(inplace=True))
 
@@ -178,11 +192,15 @@ class UNet(nn.Module):
         d2 = self.Up_conv2(d2)
         out = self.Conv(d2)
         return out
-device = 'cuda'
-model = UNet(n_channels=3,n_classes=6,bilinear=False,index=0)
-input_tensor = torch.randn(1, 3, 512, 512)
-model.to(device)
-input_tensor.to(device)
-model.eval()
-output_tensor = model(input_tensor)
-print("Output shape:", output_tensor.shape)
+names1 = ['UNet', 'UNet_SSC', 'UNet_GDC', 'UNet_DC', 'UNet_ADC', 'UNet_orgAC', 'UNet_AC','UNet_GD_AC', 'UNet_D_AC', 'UNet_AD_AC']
+for i in range(7,8):
+    try:
+        device = 'cuda'
+        model = UNet(n_channels=3,n_classes=5,bilinear=False,index=i)
+        input_tensor = torch.randn(1, 3, 256, 256)
+        model.eval()
+        output_tensor = model(input_tensor)
+        print(names1[i],": Output shape:", output_tensor.shape)
+    except Exception as e:
+        errors = traceback.format_exc()
+        print(i,names1[i],e,f'\n{errors}\n\n')
