@@ -291,7 +291,7 @@ class CustomDataset(Dataset):
 time_list = []
 torch.manual_seed(42)
 def train(x_train,y_train,n_classes,names,d,batch_size,num_epochs,n_channels):
-    device = 'cuda'
+    device = 'cpu'
     x_train = torch.from_numpy(x_train).float()
     y_train = torch.from_numpy(y_train).long()
     x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.2)
