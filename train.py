@@ -22,6 +22,10 @@ def train(x_train,y_train,n_classes,names,d,batch_size,num_epochs,n_channels,n,l
     class_weights = total_count / class_counts
     class_weights = class_weights / class_weights.sum()
     class_weights = class_weights.to(device)
+    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.2)
+    train_dataset = CustomDataset(x_train, y_train)
+    val_dataset = CustomDataset(x_val, y_val)
     b = batch_size
     temp = -1
     batch = []
@@ -38,13 +42,9 @@ def train(x_train,y_train,n_classes,names,d,batch_size,num_epochs,n_channels,n,l
             t1 = time.time()
             model = models[n](n_channels, n_classes, bilinear=False,index=q)
             model.to(device)
-            criterion = nn.CrossEntropyLoss(weight=class_weights)
             best_acc = 0.0
-            x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.2)
-            train_dataset = CustomDataset(x_train, y_train)
-            train_dataloader = DataLoader(train_dataset, batch_size=b, shuffle=True)
-            val_dataset = CustomDataset(x_val, y_val)
-            val_dataloader = DataLoader(val_dataset, batch_size=b, shuffle=True)
+            train_dataloader = DataLoader(train_dataset, b, shuffle=True)
+            val_dataloader = DataLoader(val_dataset, b, shuffle=True)
             l_t = len(train_dataloader)
             l_v = len(val_dataloader)
             optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
